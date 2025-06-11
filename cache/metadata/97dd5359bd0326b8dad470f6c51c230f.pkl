@@ -1,0 +1,6 @@
+{
+  "key": "97dd5359bd0326b8dad470f6c51c230f",
+  "timestamp": "2025-06-11T13:09:04.068997",
+  "size_bytes": 79,
+  "data_type": "dict"
+}

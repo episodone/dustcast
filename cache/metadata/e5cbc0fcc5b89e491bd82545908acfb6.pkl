@@ -1,0 +1,6 @@
+{
+  "key": "e5cbc0fcc5b89e491bd82545908acfb6",
+  "timestamp": "2025-06-11T13:09:05.560881",
+  "size_bytes": 880,
+  "data_type": "list"
+}

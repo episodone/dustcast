@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  dust-predictor:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    container_name: tashkent-dust-predictor-prod
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./cache:/app/cache
+      - ~/.config/earthengine:/home/appuser/.config/earthengine:ro
+      - ./.env.docker:/app/.env:ro
+    environment:
+      - FLASK_ENV=production
+      - GOOGLE_CLOUD_PROJECT=youtubecommentsapp
+    networks:
+      - dust-predictor-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  nginx:
+    image: nginx:alpine
+    container_name: dust-predictor-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - dust-predictor
+    networks:
+      - dust-predictor-network
+
+networks:
+  dust-predictor-network:
+    driver: bridge

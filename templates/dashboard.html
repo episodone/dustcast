@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dustcast - Advanced Dust Storm Prediction</title>
+    <style>
+        /* Your existing styles plus cache info */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, rgba(44, 62, 80, 0.85) 0%, rgba(52, 73, 94, 0.85) 100%);
+            min-height: 100vh; 
+            color: #333;
+            margin: 0;
+            position: relative;
+            padding-bottom: 180px; /* Reserve space for footer height */
+        }
+        .main-content {
+            /* Remove flex properties */
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
+        .header { text-align: center; margin-bottom: 30px; color: white; position: relative; }
+        .header h1 { font-size: 2.5rem; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .language-selector {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .language-selector:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+        .language-selector select {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            outline: none;
+        }
+        .language-selector select option {
+            background: rgba(44, 62, 80, 0.95);
+            color: white;
+        }
+        .dashboard { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 20px; 
+        }
+        .card { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 15px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1); 
+        }
+        .card h3 { 
+            color: #333; 
+            margin-bottom: 15px; 
+            font-size: 1.3rem; 
+        }
+        .risk-level { font-size: 2rem; font-weight: bold; text-align: center; padding: 20px; border-radius: 10px; margin: 15px 0; }
+        .risk-moderate { background: linear-gradient(135deg, #ffeaa7, #fdcb6e); color: #e17055; }
+        .risk-high { background: linear-gradient(135deg, #fd79a8, #e84393); color: white; }
+        .risk-low { background: linear-gradient(135deg, #00b894, #00cec9); color: white; }
+        .metric { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .metric:last-child { border-bottom: none; }
+        .metric-label { font-weight: 500; color: #666; }
+        .metric-value { font-weight: bold; font-size: 1.1rem; }
+        .forecast-items { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+            gap: 12px; 
+            margin-top: 20px; 
+        }
+        .forecast-day { 
+            background: #f8f9fa; 
+            border-radius: 10px; 
+            padding: 12px; 
+            text-align: center; 
+            border-left: 4px solid #667eea; 
+            transition: transform 0.2s ease;
+        }
+        .forecast-day:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .forecast-today {
+            border-left-color: #e84393;
+            background: linear-gradient(135deg, #fef7ff, #f3e8ff);
+        }
+        .forecast-tomorrow {
+            border-left-color: #fdcb6e;
+            background: linear-gradient(135deg, #fffbeb, #fef3c7);
+        }
+        .update-btn { background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 1rem; margin: 5px; }
+        .update-btn:hover { background: #5a67d8; }
+        .loading { 
+            text-align: center; 
+            color: #666; 
+            padding: 20px; 
+        }
+        .progress-bar { width: 100%; height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; margin: 10px 0; }
+        .progress-fill { height: 100%; transition: width 0.3s ease; }
+        .alert { background: linear-gradient(135deg, #fd79a8, #e84393); color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; }
+        .cache-info { background: #e8f4fd; color: #1e3a8a; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 0.9rem; }
+        .performance-badge { background: #10b981; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; display: inline-block; margin-left: 10px; }
+        
+        /* Footer Styles - Absolute Positioning */
+        .footer {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 30px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+        }
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+        .footer-section h4 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .footer-section p, .footer-section li {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        .footer-section ul {
+            list-style: none;
+            padding: 0;
+        }
+        .footer-section a {
+            color: #667eea;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        .footer-section a:hover {
+            color: #5a67d8;
+        }
+        .footer-bottom {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        .footer-bottom p {
+            color: #888;
+            font-size: 0.85rem;
+            margin: 5px 0;
+        }
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .social-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(135deg, rgba(44, 62, 80, 0.9) 0%, rgba(52, 73, 94, 0.9) 100%);
+            color: white;
+            border-radius: 50%;
+            text-decoration: none;
+            transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .social-links a:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, rgba(52, 73, 94, 1) 0%, rgba(44, 62, 80, 1) 100%);
+            box-shadow: 0 4px 12px rgba(44, 62, 80, 0.4);
+        }
+        .tech-badge {
+            display: inline-block;
+            background: #f1f5f9;
+            color: #64748b;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin: 2px 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <div class="container">
+            <div class="header">
+                <div class="language-selector">
+                    🌐 <select id="language-select" onchange="changeLanguage(this.value)">
+                        <option value="uz">UZ - O'zbekcha</option>
+                        <option value="en">EN - English</option>
+                        <option value="ru">RU - Русский</option>
+                    </select>
+                </div>
+                <h1 id="app-title">🌪️ Dustcast</h1>
+                <p id="app-subtitle">Advanced dust storm prediction for Tashkent • Auto-updates every 30 minutes</p>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <div class="dashboard">
+                <!-- Current Risk Level -->
+                <div class="card">
+                    <h3 id="current-risk-header">🚨 Current Risk Level</h3>
+                    <div class="risk-level" id="risk-display">
+                        <div class="loading">
+                            <div id="loading-conditions-text">Loading current conditions...</div>
+                            <div style="font-size: 0.8rem; margin-top: 10px; opacity: 0.7;" id="analyzing-satellite-text">
+                                Analyzing satellite data...
+                            </div>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="risk-progress" style="width: 0%;"></div>
+                    </div>
+                    <div class="cache-info" id="performance-info">
+                        <div style="display: flex; align-items: center; justify-content: center;">
+                            <span id="initializing-performance-text">⏳ Initializing performance monitoring...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Conditions -->
+                <div class="card">
+                    <h3 id="current-conditions-header">🌡️ Current Conditions</h3>
+                    <div class="metric">
+                        <span class="metric-label" id="temperature-label">Temperature</span>
+                        <span class="metric-value" id="temperature">--°C</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label" id="vegetation-label">Vegetation Cover</span>
+                        <span class="metric-value" id="vegetation">NDVI: --</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label" id="dust-signature-label">Dust Signature</span>
+                        <span class="metric-value" id="dust-signature">NDDI: --</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label" id="status-label">Status</span>
+                        <span class="metric-value" id="status">Loading...</span>
+                    </div>
+                </div>
+
+                <!-- Data Sources & Cache -->
+                <div class="card">
+                    <h3 id="data-sources-header">📡 Data Sources & Cache</h3>
+                    <div class="metric">
+                        <span class="metric-label" id="analysis-period-label">Analysis Period</span>
+                        <span class="metric-value" id="analysis-period">-- days</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label" id="modis-count-label">MODIS Images</span>
+                        <span class="metric-value" id="modis-count">--</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label" id="landsat-count-label">Landsat Images</span>
+                        <span class="metric-value" id="landsat-count">--</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label" id="cache-hit-rate-label">Cache Hit Rate</span>
+                        <span class="metric-value" id="cache-hit-rate">--%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label" id="cache-size-label">Cache Size</span>
+                        <span class="metric-value" id="cache-size">-- MB</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label" id="last-update-label">Last Update</span>
+                        <span class="metric-value" id="last-update">--</span>
+                    </div>
+                </div>
+
+                <!-- 7-Day Forecast -->
+                <div class="card" style="grid-column: 1 / -1;">
+                    <h3 id="forecast-header">📅 7-Day Forecast</h3>
+                    <div class="forecast-items" id="forecast-container">
+                        <div class="loading">
+                            <div id="loading-forecast-text">Loading 7-day forecast...</div>
+                            <div style="font-size: 0.8rem; margin-top: 10px; opacity: 0.7;" id="processing-data-text">
+                                Processing meteorological data...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <!-- Simplified Company Info -->
+            <div class="footer-section" style="text-align: center; grid-column: 1 / -1;">
+                <h4 id="footer-title">🌪️ Dustcast</h4>
+                <p id="footer-description">Advanced dust storm prediction and meteorological monitoring</p>
+            </div>
+        </div>
+
+        <!-- Social Links & Copyright -->
+        <div class="footer-bottom">
+            <div class="social-links">
+                <a href="#" title="LinkedIn">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854V1.146zm4.943 12.248V6.169H2.542v7.225h2.401zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248-.822 0-1.359.54-1.359 1.248 0 .694.521 1.248 1.327 1.248h.016zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016a5.54 5.54 0 0 1 .016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225h2.4z"/>
+                    </svg>
+                </a>
+                <a href="#" title="Twitter">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M5.026 15c6.038 0 9.341-5.003 9.341-9.334 0-.14 0-.282-.006-.422A6.685 6.685 0 0 0 16 3.542a6.658 6.658 0 0 1-1.889.518 3.301 3.301 0 0 0 1.447-1.817 6.533 6.533 0 0 1-2.087.793A3.286 3.286 0 0 0 7.875 6.03a9.325 9.325 0 0 1-6.767-3.429 3.289 3.289 0 0 0 1.018 4.382A3.323 3.323 0 0 1 .64 6.575v.045a3.288 3.288 0 0 0 2.632 3.218 3.203 3.203 0 0 1-.865.115 3.23 3.23 0 0 1-.614-.057 3.283 3.283 0 0 0 3.067 2.277A6.588 6.588 0 0 1 .78 13.58a6.32 6.32 0 0 1-.78-.045A9.344 9.344 0 0 0 5.026 15z"/>
+                    </svg>
+                </a>
+                <a href="#" title="Email">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414.05 3.555zM0 4.697v7.104l5.803-3.558L0 4.697zM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586l-1.239-.757zm3.436-.586L16 11.801V4.697l-5.803 3.546z"/>
+                    </svg>
+                </a>
+            </div>
+            
+            <p id="footer-copyright">&copy; 2025 LLC Episode One. All rights reserved.</p>
+            <p id="footer-tagline">Dustcast - Professional meteorological services powered by satellite technology</p>
+        </div>
+    </footer>
+
+    <script>
+        // Localization system
+        const translations = {
+            uz: {
+                appTitle: "🌪️ Dustcast",
+                appSubtitle: "Toshkent uchun rivojlangan chang bo'roni bashorati • Har 30 daqiqada yangilanadi",
+                currentRiskLevel: "🚨 Hozirgi Xavf Darajasi",
+                currentConditions: "🌡️ Hozirgi Sharoitlar",
+                dataSources: "📡 Ma'lumot Manbalari va Kesh",
+                sevenDayForecast: "📅 7 Kunlik Prognoz",
+                temperature: "Harorat",
+                vegetationCover: "O'simlik Qoplami",
+                dustSignature: "Chang Belgisi",
+                status: "Holat",
+                analysisPeriod: "Tahlil Davri",
+                modisImages: "MODIS Tasvirlari",
+                landsatImages: "Landsat Tasvirlari",
+                cacheHitRate: "Kesh Muvaffaqiyat Darajasi",
+                cacheSize: "Kesh Hajmi",
+                lastUpdate: "So'nggi Yangilanish",
+                highRisk: "YUQORI XAV",
+                moderateRisk: "O'RTA XAVF",
+                lowRisk: "PAST XAVF",
+                riskIndex: "Xavf Indeksi",
+                today: "Bugun",
+                tomorrow: "Ertaga",
+                monday: "Dushanba",
+                tuesday: "Seshanba", 
+                wednesday: "Chorshanba",
+                thursday: "Payshanba",
+                friday: "Juma",
+                saturday: "Shanba",
+                sunday: "Yakshanba",
+                confident: "ishonch",
+                increasing: "↗️ Ortmoqda",
+                decreasing: "↘️ Kamaymoqda",
+                stable: "→ Barqaror",
+                current: "→ Hozirgi",
+                loading: "Yuklanmoqda...",
+                loadingConditions: "Hozirgi sharoitlar yuklanmoqda...",
+                loadingForecast: "7 kunlik prognoz yuklanmoqda...",
+                analyzingSatellite: "Sun'iy yo'ldosh ma'lumotlari tahlil qilinmoqda...",
+                processingData: "Meteorologik ma'lumotlar qayta ishlanmoqda...",
+                initializingPerformance: "⏳ Ishlash monitoringi ishga tushirilmoqda...",
+                highRiskAlert: "⚠️ YUQORI CHANG BO'RONI XAVFI ANIQLANDI! Ehtiyot choralarini ko'ring.",
+                elevatedDustAlert: "🔍 Yuqori chang belgisi aniqlandi. Sharoitlarni diqqat bilan kuzating.",
+                footerTitle: "🌪️ Dustcast",
+                footerDescription: "Rivojlangan chang bo'roni bashorati va meteorologik monitoring",
+                footerCopyright: "© 2025 LLC Episode One. Barcha huquqlar himoyalangan.",
+                footerTagline: "Dustcast - Sun'iy yo'ldosh texnologiyasi asosidagi professional meteorologik xizmatlar",
+                days: "kun"
+            },
+            en: {
+                appTitle: "🌪️ Dustcast",
+                appSubtitle: "Advanced dust storm prediction for Tashkent • Auto-updates every 30 minutes",
+                currentRiskLevel: "🚨 Current Risk Level",
+                currentConditions: "🌡️ Current Conditions", 
+                dataSources: "📡 Data Sources & Cache",
+                sevenDayForecast: "📅 7-Day Forecast",
+                temperature: "Temperature",
+                vegetationCover: "Vegetation Cover",
+                dustSignature: "Dust Signature",
+                status: "Status",
+                analysisPeriod: "Analysis Period",
+                modisImages: "MODIS Images",
+                landsatImages: "Landsat Images",
+                cacheHitRate: "Cache Hit Rate",
+                cacheSize: "Cache Size",
+                lastUpdate: "Last Update",
+                highRisk: "HIGH RISK",
+                moderateRisk: "MODERATE RISK",
+                lowRisk: "LOW RISK",
+                riskIndex: "Risk Index",
+                today: "Today",
+                tomorrow: "Tomorrow",
+                monday: "Monday",
+                tuesday: "Tuesday",
+                wednesday: "Wednesday", 
+                thursday: "Thursday",
+                friday: "Friday",
+                saturday: "Saturday",
+                sunday: "Sunday",
+                confident: "confident",
+                increasing: "↗️ Increasing",
+                decreasing: "↘️ Decreasing",
+                stable: "→ Stable",
+                current: "→ Current",
+                loading: "Loading...",
+                loadingConditions: "Loading current conditions...",
+                loadingForecast: "Loading 7-day forecast...",
+                analyzingSatellite: "Analyzing satellite data...",
+                processingData: "Processing meteorological data...",
+                initializingPerformance: "⏳ Initializing performance monitoring...",
+                highRiskAlert: "⚠️ HIGH DUST STORM RISK DETECTED! Take precautionary measures.",
+                elevatedDustAlert: "🔍 Elevated dust signature detected. Monitor conditions closely.",
+                footerTitle: "🌪️ Dustcast",
+                footerDescription: "Advanced dust storm prediction and meteorological monitoring",
+                footerCopyright: "© 2025 LLC Episode One. All rights reserved.",
+                footerTagline: "Dustcast - Professional meteorological services powered by satellite technology",
+                days: "days"
+            },
+            ru: {
+                appTitle: "🌪️ Dustcast",
+                appSubtitle: "Продвинутый прогноз пыльных бурь для Ташкента • Обновляется каждые 30 минут",
+                currentRiskLevel: "🚨 Текущий Уровень Риска",
+                currentConditions: "🌡️ Текущие Условия",
+                dataSources: "📡 Источники Данных и Кэш",
+                sevenDayForecast: "📅 7-Дневный Прогноз",
+                temperature: "Температура",
+                vegetationCover: "Растительный Покров",
+                dustSignature: "Признаки Пыли",
+                status: "Статус",
+                analysisPeriod: "Период Анализа",
+                modisImages: "Снимки MODIS",
+                landsatImages: "Снимки Landsat",
+                cacheHitRate: "Попадания в Кэш",
+                cacheSize: "Размер Кэша",
+                lastUpdate: "Последнее Обновление",
+                highRisk: "ВЫСОКИЙ РИСК",
+                moderateRisk: "УМЕРЕННЫЙ РИСК",
+                lowRisk: "НИЗКИЙ РИСК",
+                riskIndex: "Индекс Риска",
+                today: "Сегодня",
+                tomorrow: "Завтра",
+                monday: "Понедельник",
+                tuesday: "Вторник",
+                wednesday: "Среда",
+                thursday: "Четверг",
+                friday: "Пятница",
+                saturday: "Суббота",
+                sunday: "Воскресенье",
+                confident: "уверенность",
+                increasing: "↗️ Растёт",
+                decreasing: "↘️ Снижается", 
+                stable: "→ Стабильно",
+                current: "→ Текущий",
+                loading: "Загрузка...",
+                loadingConditions: "Загрузка текущих условий...",
+                loadingForecast: "Загрузка 7-дневного прогноза...",
+                analyzingSatellite: "Анализ спутниковых данных...",
+                processingData: "Обработка метеорологических данных...",
+                initializingPerformance: "⏳ Инициализация мониторинга производительности...",
+                highRiskAlert: "⚠️ ОБНАРУЖЕН ВЫСОКИЙ РИСК ПЫЛЬНОЙ БУРИ! Примите меры предосторожности.",
+                elevatedDustAlert: "🔍 Обнаружены повышенные признаки пыли. Внимательно следите за условиями.",
+                footerTitle: "🌪️ Dustcast",
+                footerDescription: "Продвинутый прогноз пыльных бурь и метеорологический мониторинг",
+                footerCopyright: "© 2025 LLC Episode One. Все права защищены.",
+                footerTagline: "Dustcast - Профессиональные метеорологические услуги на основе спутниковых технологий",
+                days: "дней"
+            }
+        };
+
+        let currentLanguage = 'uz'; // Default to Uzbek
+
+        function changeLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('dustcast-language', lang);
+            updateUILanguage();
+            console.log(`Language changed to: ${lang}`);
+        }
+
+        function updateUILanguage() {
+            const t = translations[currentLanguage];
+            
+            // Update static elements
+            document.getElementById('app-title').textContent = t.appTitle;
+            document.getElementById('app-subtitle').textContent = t.appSubtitle;
+            
+            // Update card headers
+            updateElementText('current-risk-header', t.currentRiskLevel);
+            updateElementText('current-conditions-header', t.currentConditions);
+            updateElementText('data-sources-header', t.dataSources);
+            updateElementText('forecast-header', t.sevenDayForecast);
+            
+            // Update metric labels
+            updateElementText('temperature-label', t.temperature);
+            updateElementText('vegetation-label', t.vegetationCover);
+            updateElementText('dust-signature-label', t.dustSignature);
+            updateElementText('status-label', t.status);
+            updateElementText('analysis-period-label', t.analysisPeriod);
+            updateElementText('modis-count-label', t.modisImages);
+            updateElementText('landsat-count-label', t.landsatImages);
+            updateElementText('cache-hit-rate-label', t.cacheHitRate);
+            updateElementText('cache-size-label', t.cacheSize);
+            updateElementText('last-update-label', t.lastUpdate);
+            
+            // Update footer
+            updateElementText('footer-title', t.footerTitle);
+            updateElementText('footer-description', t.footerDescription);
+            updateElementText('footer-copyright', t.footerCopyright);
+            updateElementText('footer-tagline', t.footerTagline);
+            
+            // Update loading texts
+            updateLoadingTexts();
+            
+            // Re-render dynamic content with current data if available
+            if (window.currentConditionsData) {
+                updateCurrentDisplay(window.currentConditionsData);
+            }
+            
+            if (window.forecastData) {
+                updateForecastDisplay(window.forecastData);
+            }
+            
+            console.log(`UI updated to ${currentLanguage}`);
+        }
+
+        function updateElementText(id, text) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = text;
+            }
+        }
+
+        function getTranslation(key) {
+            return translations[currentLanguage][key] || translations.en[key] || key;
+        }
+
+        function translateDayName(dayName) {
+            const t = translations[currentLanguage];
+            const dayMap = {
+                'Today': t.today,
+                'Tomorrow': t.tomorrow,
+                'Monday': t.monday,
+                'Tuesday': t.tuesday,
+                'Wednesday': t.wednesday,
+                'Thursday': t.thursday,
+                'Friday': t.friday,
+                'Saturday': t.saturday,
+                'Sunday': t.sunday
+            };
+            return dayMap[dayName] || dayName;
+        }
+
+        function translateTendency(tendency) {
+            const t = translations[currentLanguage];
+            const tendencyMap = {
+                'Increasing': t.increasing,
+                'Decreasing': t.decreasing,
+                'Stable': t.stable,
+                'Current': t.current
+            };
+            return tendencyMap[tendency] || tendency;
+        }
+
+        // Initialize language on page load
+        function initializeLanguage() {
+            const savedLang = localStorage.getItem('dustcast-language') || 'uz';
+            document.getElementById('language-select').value = savedLang;
+            currentLanguage = savedLang;
+            updateUILanguage();
+        }
+
+        async function fetchCurrentConditions() {
+            try {
+                console.log('Fetching current conditions...');
+                const response = await fetch('/api/current');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Current conditions data:', data);
+                
+                if (data.error) {
+                    console.error('API returned error:', data.error);
+                    showError('Failed to load current conditions: ' + data.error);
+                } else {
+                    updateCurrentDisplay(data);
+                }
+            } catch (error) {
+                console.error('Error fetching current conditions:', error);
+                showError('Network error loading current conditions');
+            }
+        }
+
+        async function fetchForecast() {
+            try {
+                console.log('Fetching forecast...');
+                const response = await fetch('/api/forecast');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Forecast data:', data);
+                
+                if (data.error || (Array.isArray(data) && data[0]?.error)) {
+                    const errorMsg = data.error || data[0].error;
+                    console.error('Forecast API error:', errorMsg);
+                    showForecastError(errorMsg);
+                } else {
+                    updateForecastDisplay(data);
+                }
+            } catch (error) {
+                console.error('Error fetching forecast:', error);
+                showForecastError('Network error loading forecast');
+            }
+        }
+
+        function updateCurrentDisplay(data) {
+            console.log('Updating current display with data:', data);
+            
+            // Store data globally for language switching
+            window.currentConditionsData = data;
+            
+            if (data.error) {
+                showError(data.error);
+                return;
+            }
+
+            try {
+                const t = translations[currentLanguage];
+                
+                // Update risk level
+                const riskDisplay = document.getElementById('risk-display');
+                const riskProgress = document.getElementById('risk-progress');
+                
+                if (!riskDisplay || !riskProgress) {
+                    console.error('Risk display elements not found');
+                    return;
+                }
+                
+                let riskClass = 'risk-moderate';
+                let riskText = t.moderateRisk;
+                
+                if (data.risk_level === 'high') {
+                    riskClass = 'risk-high';
+                    riskText = t.highRisk;
+                } else if (data.risk_level === 'low') {
+                    riskClass = 'risk-low';
+                    riskText = t.lowRisk;
+                }
+                
+                riskDisplay.className = `risk-level ${riskClass}`;
+                riskDisplay.innerHTML = `
+                    ${riskText}
+                    <div style="font-size: 1rem; margin-top: 10px;">
+                        ${t.riskIndex}: ${(data.dust_risk_index || 0).toFixed(3)}
+                    </div>
+                `;
+                
+                const riskPercentage = (data.dust_risk_index || 0) * 100;
+                riskProgress.style.width = `${riskPercentage}%`;
+                riskProgress.style.background = riskClass === 'risk-high' ? '#e84393' : 
+                                               riskClass === 'risk-low' ? '#00b894' : '#fdcb6e';
+
+                // Update metrics with fallbacks
+                const tempElement = document.getElementById('temperature');
+                const vegElement = document.getElementById('vegetation');
+                const dustElement = document.getElementById('dust-signature');
+                const statusElement = document.getElementById('status');
+                
+                if (tempElement) tempElement.textContent = `${(data.lst_day_mean || 0).toFixed(1)}°C`;
+                if (vegElement) vegElement.textContent = `NDVI: ${(data.ndvi_mean || 0).toFixed(3)}`;
+                if (dustElement) dustElement.textContent = `NDDI: ${(data.nddi_mean || 0).toFixed(3)}`;
+                if (statusElement) statusElement.textContent = data.dust_signature_status || 'Unknown';
+
+                // Update data sources
+                const analysisElement = document.getElementById('analysis-period');
+                const modisElement = document.getElementById('modis-count');
+                const landsatElement = document.getElementById('landsat-count');
+                const lastUpdateElement = document.getElementById('last-update');
+                
+                if (analysisElement) analysisElement.textContent = `${data.analysis_period_days || '--'} ${t.days}`;
+                if (lastUpdateElement) lastUpdateElement.textContent = new Date().toLocaleTimeString();
+                
+                // Parse data sources safely
+                if (data.data_sources && typeof data.data_sources === 'string') {
+                    const sources = data.data_sources.split(',');
+                    sources.forEach(source => {
+                        if (source.includes('MODIS') && modisElement) {
+                            const count = source.split('_')[2] || '--';
+                            modisElement.textContent = count;
+                        }
+                        if (source.includes('Landsat') && landsatElement) {
+                            const count = source.split('_')[1] || '--';
+                            landsatElement.textContent = count;
+                        }
+                    });
+                } else {
+                    if (modisElement) modisElement.textContent = data.modis_count || '--';
+                    if (landsatElement) landsatElement.textContent = data.landsat_count || '--';
+                }
+                
+                // Update cache statistics
+                const cacheHitElement = document.getElementById('cache-hit-rate');
+                const cacheSizeElement = document.getElementById('cache-size');
+                
+                if (data.cache_stats) {
+                    if (cacheHitElement) cacheHitElement.textContent = `${data.cache_stats.hit_rate_percent || 0}%`;
+                    if (cacheSizeElement) cacheSizeElement.textContent = `${data.cache_stats.cache_size_mb || 0} MB`;
+                } else {
+                    if (cacheHitElement) cacheHitElement.textContent = 'N/A';
+                    if (cacheSizeElement) cacheSizeElement.textContent = 'N/A';
+                }
+
+                // Update performance info
+                updatePerformanceInfo(data);
+
+                // Update alerts with translations
+                updateAlerts(data);
+                
+                console.log('Current display updated successfully');
+                
+            } catch (error) {
+                console.error('Error updating current display:', error);
+                showError('Error displaying current conditions');
+            }
+        }
+
+        function updatePerformanceInfo(data) {
+            const performanceInfo = document.getElementById('performance-info');
+            if (!performanceInfo) return;
+            
+            try {
+                if (data.execution_time_seconds !== undefined && data.cache_stats) {
+                    const execTime = data.execution_time_seconds;
+                    let speedBadge = '';
+                    
+                    if (execTime < 5) {
+                        speedBadge = '<span class="performance-badge">⚡ FAST</span>';
+                    } else if (execTime < 15) {
+                        speedBadge = '<span class="performance-badge" style="background: #f59e0b;">🐌 SLOW</span>';
+                    } else {
+                        speedBadge = '<span class="performance-badge" style="background: #ef4444;">🚨 VERY SLOW</span>';
+                    }
+                    
+                    const hits = data.cache_stats.hits || 0;
+                    const misses = data.cache_stats.misses || 0;
+                    const hitRate = data.cache_stats.hit_rate_percent || 0;
+                    
+                    performanceInfo.innerHTML = `
+                        ⏱️ Analysis: ${execTime}s ${speedBadge}<br>
+                        🎯 Cache: ${hits} hits, ${misses} misses (${hitRate}% hit rate)
+                    `;
+                } else {
+                    // Fallback if execution time or cache stats are missing
+                    performanceInfo.innerHTML = `
+                        ⚡ Loading complete<br>
+                        🎯 Cache: ${data.cache_stats ? 'Active' : 'Initializing'}
+                    `;
+                }
+            } catch (error) {
+                console.error('Error updating performance info:', error);
+                performanceInfo.innerHTML = `
+                    ⚠️ Performance data unavailable
+                `;
+            }
+        }
+
+        function updateForecastDisplay(forecast) {
+            const container = document.getElementById('forecast-container');
+            
+            // Store forecast data globally for language switching
+            window.forecastData = forecast;
+            
+            if (!forecast || forecast.length === 0 || forecast[0].error) {
+                const t = translations[currentLanguage];
+                container.innerHTML = `<div class="loading">${t.loading}</div>`;
+                return;
+            }
+            
+            const t = translations[currentLanguage];
+            
+            container.innerHTML = forecast.map(day => {
+                let riskColor = day.risk_level === 'high' ? '#e84393' : 
+                               day.risk_level === 'low' ? '#00b894' : '#fdcb6e';
+                
+                // Special styling for today and tomorrow
+                let cardClass = 'forecast-day';
+                if (day.day_index === 0) cardClass += ' forecast-today';
+                else if (day.day_index === 1) cardClass += ' forecast-tomorrow';
+                
+                // Confidence indicator
+                let confidenceColor = day.confidence > 0.8 ? '#00b894' : 
+                                     day.confidence > 0.6 ? '#fdcb6e' : '#e17055';
+                
+                // Translate day name and tendency
+                const translatedDayName = translateDayName(day.day_name);
+                const translatedTendency = translateTendency(day.tendency);
+                
+                // Translate risk level
+                let translatedRisk = t.moderateRisk;
+                if (day.risk_level === 'high') {
+                    translatedRisk = t.highRisk;
+                } else if (day.risk_level === 'low') {
+                    translatedRisk = t.lowRisk;
+                }
+                
+                return `
+                    <div class="${cardClass}">
+                        <div style="font-weight: bold; margin-bottom: 6px; font-size: 0.9rem;">
+                            ${translatedDayName}
+                        </div>
+                        <div style="font-size: 0.75rem; color: #666; margin-bottom: 8px;">
+                            ${new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </div>
+                        <div style="font-size: 1.1rem; font-weight: bold; color: ${riskColor}; margin: 6px 0;">
+                            ${translatedRisk}
+                        </div>
+                        <div style="font-size: 0.8rem; color: #666; margin: 6px 0;">
+                            ${day.temperature}°C | ${(day.risk_score * 100).toFixed(0)}%
+                        </div>
+                        <div class="progress-bar" style="height: 6px; margin: 6px 0;">
+                            <div class="progress-fill" style="width: ${day.risk_score * 100}%; background: ${riskColor};"></div>
+                        </div>
+                        <div style="font-size: 0.7rem; color: ${confidenceColor}; margin: 4px 0; font-weight: 500;">
+                            ${(day.confidence * 100).toFixed(0)}% ${t.confident}
+                        </div>
+                        <div style="font-size: 0.7rem; color: #888; margin-top: 4px;">
+                            ${translatedTendency}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateAlerts(data) {
+            const alertContainer = document.getElementById('alert-container');
+            const t = translations[currentLanguage];
+            
+            if (data.risk_level === 'high') {
+                alertContainer.innerHTML = `
+                    <div class="alert">
+                        ${t.highRiskAlert}
+                    </div>
+                `;
+            } else if (data.nddi_mean > 0.15) {
+                alertContainer.innerHTML = `
+                    <div class="alert" style="background: linear-gradient(135deg, #fdcb6e, #e17055);">
+                        ${t.elevatedDustAlert}
+                    </div>
+                `;
+            } else {
+                alertContainer.innerHTML = '';
+            }
+        }
+
+        function showError(message) {
+            const riskDisplay = document.getElementById('risk-display');
+            const performanceInfo = document.getElementById('performance-info');
+            const t = translations[currentLanguage];
+            
+            if (riskDisplay) {
+                riskDisplay.innerHTML = `
+                    <div style="color: #e74c3c; text-align: center;">
+                        <div style="font-size: 1rem;">⚠️ Error</div>
+                        <div style="font-size: 0.8rem; margin-top: 10px;">${message}</div>
+                    </div>
+                `;
+            }
+            
+            if (performanceInfo) {
+                performanceInfo.innerHTML = `
+                    <span style="color: #e74c3c;">❌ Error loading data</span>
+                `;
+            }
+        }
+
+        function showForecastError(message) {
+            const container = document.getElementById('forecast-container');
+            if (container) {
+                container.innerHTML = `
+                    <div style="color: #e74c3c; text-align: center; padding: 20px;">
+                        ⚠️ Error loading forecast: ${message}
+                    </div>
+                `;
+            }
+        }
+
+        // Update loading text elements when language changes
+        function updateLoadingTexts() {
+            const t = translations[currentLanguage];
+            
+            updateElementText('loading-conditions-text', t.loadingConditions);
+            updateElementText('analyzing-satellite-text', t.analyzingSatellite);
+            updateElementText('initializing-performance-text', t.initializingPerformance);
+            updateElementText('loading-forecast-text', t.loadingForecast);
+            updateElementText('processing-data-text', t.processingData);
+        }
+
+        // Initial load and auto-refresh setup
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize language first
+            initializeLanguage();
+            
+            // Load data immediately
+            loadData();
+            
+            // Set up automatic refresh every 30 minutes
+            setInterval(loadData, 30 * 60 * 1000);
+            
+            // Show next update time
+            updateNextRefreshTime();
+            setInterval(updateNextRefreshTime, 60 * 1000); // Update timer every minute
+        });
+
+        async function loadData() {
+            try {
+                await Promise.all([fetchCurrentConditions(), fetchForecast()]);
+                console.log('Data refreshed automatically');
+            } catch (error) {
+                console.error('Auto-refresh error:', error);
+            }
+        }
+
+        function updateNextRefreshTime() {
+            const now = new Date();
+            const nextRefresh = new Date(now.getTime() + (30 * 60 * 1000));
+            const timeUntilRefresh = Math.round((nextRefresh - now) / 60000);
+            
+            // You could add this to the UI if desired:
+            // document.querySelector('.next-refresh').textContent = `Next update in ${timeUntilRefresh} minutes`;
+        }
+    </script>
+</body>
+</html>

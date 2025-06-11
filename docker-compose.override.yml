@@ -1,0 +1,16 @@
+# Development overrides
+version: '3.8'
+
+services:
+  dust-predictor:
+    build:
+      context: .
+      dockerfile: Dockerfile  # Use development Dockerfile
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=True
+    volumes:
+      # Mount source code for development
+      - .:/app
+      - /app/dust_predictor_env  # Exclude virtual env
+    command: ["python", "app.py"]  # Use development server
